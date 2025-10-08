@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: website-intelligence-api
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        fromService:
+          type: web
+          name: website-intelligence-api
+          property: port
+      - key: API_SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: JINA_AI_API_KEY
+        sync: false
+      - key: MIN_TEXT_LENGTH
+        value: "500"
+      - key: MIN_TEXT_RATIO
+        value: "0.1"
+      - key: MIN_KEYWORD_MATCHES
+        value: "2"
+      - key: SCRAPING_TIMEOUT
+        value: "10"
+      - key: ANALYZE_RATE_LIMIT
+        value: "20/minute"
+      - key: CHAT_RATE_LIMIT
+        value: "60/minute"
