@@ -4,10 +4,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "outputDirectory": ".next",
-  "env": {
-    "NEXT_PUBLIC_API_BASE_URL": "@next_public_api_base_url",
-    "NEXT_PUBLIC_API_SECRET_KEY": "@next_public_api_secret_key"
-  },
   "headers": [
     {
       "source": "/(.*)",
