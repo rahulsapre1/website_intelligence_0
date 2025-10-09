@@ -126,6 +126,14 @@ async def test_services():
 @app.post("/api/v1/analyze-demo")
 async def analyze_demo(request: dict):
     """Demo endpoint that returns mock analysis data without authentication."""
+    from app.services.ai_processor import AIProcessor
+    from app.services.scraper import WebScraper
+    from app.services.scraper_fallback import FallbackScraper
+    
+    ai_processor = AIProcessor()
+    scraper = WebScraper()
+    fallback_scraper = FallbackScraper()
+    
     return {
         "session_id": f"demo_{int(time.time())}",
         "url": request.get("url", "https://example.com"),
@@ -155,7 +163,14 @@ async def analyze_demo(request: dict):
         ],
         "processing_time": 2.5,
         "scraping_method": "demo",
-        "content_length": 1500
+        "content_length": 1500,
+        "service_status": {
+            "ai_processor_mock_mode": ai_processor.mock_mode,
+            "ai_processor_has_api_key": bool(ai_processor.api_key),
+            "fallback_scraper_mock_mode": fallback_scraper.mock_mode,
+            "fallback_scraper_has_api_key": bool(fallback_scraper.api_key),
+            "scraper_timeout": scraper.timeout
+        }
     }
 
 
