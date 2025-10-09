@@ -42,8 +42,8 @@ router = APIRouter()
 )
 @chat_rate_limit
 async def chat_about_website(
-    http_request: Request,
-    request: ChatRequest,
+    request: Request,
+    chat_request: ChatRequest,
     current_user: str = Depends(get_current_user)
 ) -> ChatResponse:
     """
@@ -59,7 +59,7 @@ async def chat_about_website(
     start_time = time.time()
     
     try:
-        logger.info(f"Processing chat query: {request.query[:100]}...")
+        logger.info(f"Processing chat query: {chat_request.query[:100]}...")
         
         # Initialize services with error handling
         ai_processor = AIProcessor()
@@ -89,16 +89,16 @@ async def chat_about_website(
         # Step 1: Find analysis session
         session_data = None
         if database_service:
-            if request.session_id:
-                session_data = await database_service.get_analysis_session(request.session_id)
-            elif request.url:
-                session_data = await database_service.get_analysis_session_by_url(str(request.url))
+            if chat_request.session_id:
+                session_data = await database_service.get_analysis_session(chat_request.session_id)
+            elif chat_request.url:
+                session_data = await database_service.get_analysis_session_by_url(str(chat_request.url))
         else:
             # If database not available, create a mock session for basic chat functionality
-            if request.url:
+            if chat_request.url:
                 session_data = {
-                    "id": f"mock_{hash(str(request.url))}",
-                    "url": str(request.url),
+                    "id": f"mock_{hash(str(chat_request.url))}",
+                    "url": str(chat_request.url),
                     "scraped_content": "Database not available - using mock session for basic chat functionality.",
                     "insights": {}
                 }
@@ -111,8 +111,8 @@ async def chat_about_website(
                     message="Analysis session not found",
                     code="SESSION_NOT_FOUND",
                     details={
-                        "session_id": request.session_id,
-                        "url": str(request.url) if request.url else None,
+                        "session_id": chat_request.session_id,
+                        "url": str(chat_request.url) if chat_request.url else None,
                         "database_available": database_service is not None
                     }
                 )
@@ -120,8 +120,8 @@ async def chat_about_website(
         
         # Step 2: Get conversation history
         conversation_history = []
-        if request.conversation_history:
-            conversation_history = request.conversation_history
+        if chat_request.conversation_history:
+            conversation_history = chat_request.conversation_history
         elif database_service:
             # Get recent conversation history from database
             conversation_history = await database_service.get_conversation_history(
@@ -137,7 +137,7 @@ async def chat_about_website(
         # Step 3: Generate query embedding for context retrieval
         query_embedding = None
         if embedding_service:
-            query_embedding = await embedding_service.generate_embedding(request.query)
+            query_embedding = await embedding_service.generate_embedding(chat_request.query)
         
         # Step 4: Find relevant context chunks
         relevant_chunks = []
@@ -168,7 +168,7 @@ async def chat_about_website(
         
         # Step 6: Generate AI response
         ai_response = await ai_processor.answer_question(
-            query=request.query,
+            query=chat_request.query,
             context=context,
             conversation_history=conversation_history
         )
@@ -192,7 +192,7 @@ async def chat_about_website(
             try:
                 conversation_data = await database_service.create_conversation(
                     session_id=session_data["id"],
-                    query=request.query,
+                    query=chat_request.query,
                     answer=ai_response["answer"],
                     context_used=sources
                 )
@@ -207,7 +207,7 @@ async def chat_about_website(
         response = ChatResponse(
             session_id=session_data["id"],
             answer=ai_response["answer"],
-            query=request.query,
+            query=chat_request.query,
             conversation_id=conversation_data["id"],
             sources=sources,
             answer_metadata={

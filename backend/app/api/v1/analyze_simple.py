@@ -41,8 +41,8 @@ router = APIRouter()
 )
 @analyze_rate_limit
 async def analyze_website_simple(
-    http_request: Request,
-    request: AnalyzeRequest,
+    request: Request,
+    analyze_request: AnalyzeRequest,
     current_user: str = Depends(get_current_user)
 ) -> AnalyzeResponse:
     """
@@ -51,14 +51,14 @@ async def analyze_website_simple(
     start_time = time.time()
     
     try:
-        api_logger.info("Starting simplified analysis", url=str(request.url), user="demo")
+        api_logger.info("Starting simplified analysis", url=str(analyze_request.url), user="demo")
         
         # Check cache first
-        questions_hash = hashlib.md5(str(request.questions or []).encode()).hexdigest()
-        cached_result = cache_service.get_analysis_result(str(request.url), questions_hash)
+        questions_hash = hashlib.md5(str(analyze_request.questions or []).encode()).hexdigest()
+        cached_result = cache_service.get_analysis_result(str(analyze_request.url), questions_hash)
         
         if cached_result:
-            api_logger.info("Returning cached analysis result", url=str(request.url))
+            api_logger.info("Returning cached analysis result", url=str(analyze_request.url))
             return AnalyzeResponse(**cached_result)
         
         # Initialize services (excluding database and vector store)
@@ -68,19 +68,19 @@ async def analyze_website_simple(
         text_processor = TextProcessor()
         
         # Step 1: Scrape website content (check cache first)
-        scraping_result = cache_service.get_scraped_content(str(request.url))
+        scraping_result = cache_service.get_scraped_content(str(analyze_request.url))
         
         if not scraping_result:
-            scraping_result = await scraper.scrape_url(str(request.url))
+            scraping_result = await scraper.scrape_url(str(analyze_request.url))
             # Cache the scraping result
             if scraping_result["success"]:
-                cache_service.set_scraped_content(str(request.url), scraping_result)
+                cache_service.set_scraped_content(str(analyze_request.url), scraping_result)
         
         if not scraping_result["success"]:
             # Try fallback scraper if available
             if fallback_scraper.is_available():
-                logger.info(f"Primary scraper failed, trying fallback for {request.url}")
-                scraping_result = await fallback_scraper.scrape_url(str(request.url))
+                logger.info(f"Primary scraper failed, trying fallback for {analyze_request.url}")
+                scraping_result = await fallback_scraper.scrape_url(str(analyze_request.url))
             
             if not scraping_result["success"]:
                 raise HTTPException(
@@ -88,7 +88,7 @@ async def analyze_website_simple(
                     detail=ErrorDetail(
                         message="Failed to scrape website content",
                         code="SCRAPING_FAILED",
-                        details={"url": str(request.url), "error": scraping_result.get("error_message")}
+                        details={"url": str(analyze_request.url), "error": scraping_result.get("error_message")}
                     )
                 )
         
@@ -103,13 +103,13 @@ async def analyze_website_simple(
         if not insights:
             insights = await ai_processor.extract_business_insights(
                 content, 
-                custom_questions=request.questions
+                custom_questions=analyze_request.questions
             )
             # Cache the AI insights
             cache_service.set_ai_insights(content_hash, insights)
         
         # Step 3: Create response (without database storage)
-        session_id = f"simple_{int(time.time())}_{hash(str(request.url)) % 10000}"
+        session_id = f"simple_{int(time.time())}_{hash(str(analyze_request.url)) % 10000}"
         processing_time_ms = int((time.time() - start_time) * 1000)
         
         # Create proper response objects
@@ -133,7 +133,7 @@ async def analyze_website_simple(
         
         extraction_metadata = ExtractionMetadata(
             content_length=len(content),
-            custom_questions_count=len(request.questions) if request.questions else 0,
+            custom_questions_count=len(analyze_request.questions) if analyze_request.questions else 0,
             extraction_method="gemini_2.5_flash",
             confidence=insights.get("confidence_score", 5),
             scraping_method=scraping_result["scraping_method"],
@@ -142,7 +142,7 @@ async def analyze_website_simple(
         
         response = AnalyzeResponse(
             session_id=session_id,
-            url=str(request.url),
+            url=str(analyze_request.url),
             scraped_at=scraping_result["scraped_at"],
             insights=business_insights,
             custom_answers=insights.get("custom_answers", []),
@@ -152,11 +152,11 @@ async def analyze_website_simple(
         )
         
         # Cache the complete result
-        cache_service.set_analysis_result(str(request.url), response.dict(), questions_hash)
+        cache_service.set_analysis_result(str(analyze_request.url), response.dict(), questions_hash)
         
         api_logger.info("Analysis completed", 
                        processing_time_ms=processing_time_ms, 
-                       url=str(request.url),
+                       url=str(analyze_request.url),
                        cached=True)
         return response
         
