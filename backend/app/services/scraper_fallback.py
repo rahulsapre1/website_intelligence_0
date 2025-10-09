@@ -16,6 +16,7 @@ class FallbackScraper:
     
     def __init__(self):
         self.api_key = settings.jina_ai_api_key
+        self.mock_mode = not bool(self.api_key)
         self.base_url = "https://r.jina.ai"
         self.timeout = settings.scraping_timeout
         
@@ -39,6 +40,11 @@ class FallbackScraper:
         """
         try:
             logger.info(f"Using fallback scraper for URL: {url}")
+            
+            # Return mock data if in mock mode
+            if self.mock_mode:
+                logger.info("Fallback scraper in mock mode - no API key configured")
+                return self._get_mock_content(url)
             
             # Jina AI Reader API endpoint
             api_url = f"{self.base_url}/{url}"
@@ -139,3 +145,29 @@ class FallbackScraper:
     def is_available(self) -> bool:
         """Check if fallback scraper is available (has API key)."""
         return self.api_key is not None
+    
+    def _get_mock_content(self, url: str) -> Dict[str, Any]:
+        """Generate mock content for demonstration purposes."""
+        return {
+            "content": f"""
+            <html>
+                <head><title>Mock Website - {url}</title></head>
+                <body>
+                    <h1>Welcome to Mock Website</h1>
+                    <p>This is a demonstration of the Website Intelligence API.</p>
+                    <p>Industry: Technology/SaaS</p>
+                    <p>Company: Demo Corp</p>
+                    <p>Location: San Francisco, CA</p>
+                    <p>Products: AI Solutions, Automation Tools, Analytics Platform</p>
+                    <p>Contact: demo@example.com | +1 (555) 123-4567</p>
+                    <p>We help businesses streamline operations through intelligent automation.</p>
+                </body>
+            </html>
+            """,
+            "title": f"Mock Website - {url}",
+            "url": url,
+            "scraped_at": "2024-01-01T00:00:00Z",
+            "content_length": 500,
+            "scraping_method": "mock_fallback",
+            "success": True
+        }

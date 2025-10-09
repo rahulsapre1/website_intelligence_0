@@ -19,10 +19,15 @@ class AIProcessor:
     
     def __init__(self):
         self.api_key = settings.gemini_api_key
-        genai.configure(api_key=self.api_key)
+        self.mock_mode = not bool(self.api_key)
         
-        # Initialize Gemini model
-        self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        if not self.mock_mode:
+            genai.configure(api_key=self.api_key)
+            # Initialize Gemini model
+            self.model = genai.GenerativeModel('gemini-2.5-flash')
+        else:
+            logger.warning("AIProcessor initialized in mock mode - no API key provided")
+            self.model = None
         
         # Configure generation parameters
         self.generation_config = {
@@ -49,6 +54,11 @@ class AIProcessor:
         """
         try:
             logger.info(f"Extracting business insights from {len(content)} characters of content")
+            
+            # Return mock data if in mock mode
+            if self.mock_mode:
+                logger.info("Returning mock insights - API key not configured")
+                return self._get_mock_insights(content, custom_questions)
             
             # Generate prompt
             prompt = ExtractionPrompts.get_core_insights_prompt(content, custom_questions)
@@ -228,5 +238,37 @@ class AIProcessor:
             "extraction_metadata": {
                 "error": True,
                 "error_type": error_type
+            }
+        }
+    
+    def _get_mock_insights(self, content: str, custom_questions: List[str] = None) -> Dict[str, Any]:
+        """Generate mock insights for demonstration purposes."""
+        return {
+            "industry": "Technology/SaaS",
+            "company_size": "Medium (50-200 employees)",
+            "location": "San Francisco, CA",
+            "usp": "AI-powered platform that helps businesses automate their workflows and increase productivity through intelligent automation tools.",
+            "products_services": [
+                "Workflow Automation",
+                "AI Analytics", 
+                "Integration Services",
+                "Custom Solutions"
+            ],
+            "target_audience": "B2B enterprises looking to streamline operations and improve efficiency",
+            "contact_info": {
+                "email": "contact@example.com",
+                "phone": "+1 (555) 123-4567",
+                "address": "123 Tech Street, San Francisco, CA 94105"
+            },
+            "custom_answers": [
+                "This appears to be a technology company focused on business automation solutions.",
+                "They offer AI-powered tools for workflow management and productivity enhancement.",
+                "Target market includes mid to large-scale B2B enterprises seeking operational efficiency."
+            ] if custom_questions else [],
+            "extraction_metadata": {
+                "content_length": len(content),
+                "custom_questions_count": len(custom_questions) if custom_questions else 0,
+                "extraction_method": "mock_demo",
+                "confidence": "Mock data for demonstration"
             }
         }

@@ -21,15 +21,15 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, env="PORT")
     
     # LLM APIs
-    gemini_api_key: str = Field(..., env="GEMINI_API_KEY")
+    gemini_api_key: Optional[str] = Field(default=None, env="GEMINI_API_KEY")
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
     
     # Database
-    supabase_url: str = Field(..., env="SUPABASE_URL")
-    supabase_key: str = Field(..., env="SUPABASE_KEY")
+    supabase_url: Optional[str] = Field(default=None, env="SUPABASE_URL")
+    supabase_key: Optional[str] = Field(default=None, env="SUPABASE_KEY")
     
     # Vector Database
-    qdrant_url: str = Field(..., env="QDRANT_URL")
+    qdrant_url: Optional[str] = Field(default=None, env="QDRANT_URL")
     qdrant_api_key: Optional[str] = Field(default=None, env="QDRANT_API_KEY")
     
     # External Services
