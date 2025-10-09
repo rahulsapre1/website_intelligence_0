@@ -3,6 +3,7 @@ Website Intelligence API - Main FastAPI application.
 """
 
 import logging
+import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -96,10 +97,40 @@ async def root():
         "environment": settings.environment
     }
 
-@app.post("/test-endpoint")
-async def test_endpoint():
-    """Test endpoint without authentication."""
-    return {"message": "Test endpoint working", "status": "success"}
+@app.post("/api/v1/analyze-demo")
+async def analyze_demo(request: dict):
+    """Demo endpoint that returns mock analysis data without authentication."""
+    return {
+        "session_id": f"demo_{int(time.time())}",
+        "url": request.get("url", "https://example.com"),
+        "scraped_at": "2024-01-01T00:00:00Z",
+        "insights": {
+            "industry": "Technology/SaaS",
+            "company_size": "Medium (50-200 employees)",
+            "location": "San Francisco, CA",
+            "usp": "AI-powered platform that helps businesses automate their workflows and increase productivity through intelligent automation tools.",
+            "products_services": [
+                "Workflow Automation",
+                "AI Analytics", 
+                "Integration Services",
+                "Custom Solutions"
+            ],
+            "target_audience": "B2B enterprises looking to streamline operations and improve efficiency",
+            "contact_info": {
+                "email": "contact@example.com",
+                "phone": "+1 (555) 123-4567",
+                "address": "123 Tech Street, San Francisco, CA 94105"
+            }
+        },
+        "custom_answers": [
+            "This appears to be a technology company focused on business automation solutions.",
+            "They offer AI-powered tools for workflow management and productivity enhancement.",
+            "Target market includes mid to large-scale B2B enterprises seeking operational efficiency."
+        ],
+        "processing_time": 2.5,
+        "scraping_method": "demo",
+        "content_length": 1500
+    }
 
 
 @app.get("/health")
