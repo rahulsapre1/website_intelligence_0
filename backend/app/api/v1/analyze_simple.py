@@ -19,6 +19,8 @@ from app.services.scraper_fallback import FallbackScraper
 from app.services.ai_processor import AIProcessor
 from app.services.cache import cache_service
 from app.utils.text_processor import TextProcessor
+from app.services.database import DatabaseService
+from app.core.config import settings
 from app.utils.logger import api_logger
 
 logger = logging.getLogger(__name__)
@@ -108,9 +110,37 @@ async def analyze_website_simple(
             # Cache the AI insights
             cache_service.set_ai_insights(content_hash, insights)
         
-        # Step 3: Create response (without database storage)
+        # Step 3: Persist session in database if configured; otherwise generate UUID
         import uuid
-        session_id = str(uuid.uuid4())
+        session_id = None
+        if settings.supabase_url and settings.supabase_key:
+            try:
+                db = DatabaseService()
+                created = await db.create_analysis_session(
+                    url=str(analyze_request.url),
+                    scraped_content=content,
+                    scraping_method=scraping_result["scraping_method"],
+                    insights={
+                        "industry": insights.get("industry"),
+                        "company_size": insights.get("company_size"),
+                        "location": insights.get("location"),
+                        "usp": insights.get("usp"),
+                        "products_services": insights.get("products_services", []),
+                        "target_audience": insights.get("target_audience"),
+                        "contact_info": insights.get("contact_info", {}),
+                        "confidence_score": insights.get("confidence_score"),
+                        "key_insights": insights.get("key_insights", []),
+                        "custom_answers": insights.get("custom_answers", [])
+                    }
+                )
+                if created and created.get("id"):
+                    session_id = created["id"]
+            except Exception as e:
+                logger.warning(f"Failed to persist analysis session to database: {e}")
+                session_id = None
+
+        if not session_id:
+            session_id = str(uuid.uuid4())
         processing_time_ms = int((time.time() - start_time) * 1000)
         
         # Create proper response objects
