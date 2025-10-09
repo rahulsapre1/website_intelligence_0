@@ -6,7 +6,7 @@ import logging
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue, PayloadSchemaType
 import uuid
 
 from app.core.config import settings
@@ -46,6 +46,8 @@ class VectorStoreService:
             
             if self.collection_name in collection_names:
                 logger.info(f"Collection {self.collection_name} already exists")
+                # Ensure required payload indexes exist
+                await self.ensure_indexes()
                 return True
             
             # Create collection
@@ -58,11 +60,27 @@ class VectorStoreService:
             )
             
             logger.info(f"Created collection {self.collection_name}")
+            # Create required payload indexes
+            await self.ensure_indexes()
             return True
             
         except Exception as e:
             logger.error(f"Error creating collection: {str(e)}")
             return False
+
+    async def ensure_indexes(self) -> None:
+        """Ensure required payload indexes exist for efficient filtering."""
+        try:
+            # Create index for session_id filter
+            self.client.create_payload_index(
+                collection_name=self.collection_name,
+                field_name="session_id",
+                field_schema=PayloadSchemaType.KEYWORD
+            )
+            logger.info("Ensured payload index on session_id (keyword)")
+        except Exception as e:
+            # If index already exists, Qdrant may error; log as debug
+            logger.debug(f"Payload index ensure skipped/failed: {str(e)}")
     
     async def add_document_chunks(
         self, 
@@ -190,6 +208,8 @@ class VectorStoreService:
                 created = await self.create_collection()
                 if created:
                     try:
+                        # Ensure indexes before retry
+                        await self.ensure_indexes()
                         filter_condition = None
                         if session_id:
                             filter_condition = Filter(
