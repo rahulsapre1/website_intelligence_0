@@ -39,7 +39,7 @@ router = APIRouter()
     summary="Analyze Website (Simplified)",
     description="Extract business insights from a website homepage using AI (without database storage)"
 )
-@analyze_rate_limit
+# @analyze_rate_limit  # Temporarily disabled for debugging
 async def analyze_website_simple(
     http_request: Request,
     request: AnalyzeRequest,
