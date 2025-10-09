@@ -108,11 +108,10 @@ export default function WebsiteIntelligenceDashboard() {
     const startTime = Date.now();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/analyze-simple`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/analyze-demo`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_TOKEN}`,
         },
         body: JSON.stringify({ url }),
       });
