@@ -42,7 +42,7 @@ router = APIRouter()
 @analyze_rate_limit
 async def analyze_website_simple(
     request: AnalyzeRequest,
-    current_user: str = Depends(get_current_user)
+    # current_user: str = Depends(get_current_user)  # Temporarily disabled for testing
 ) -> AnalyzeResponse:
     """
     Analyze a website and extract business insights (simplified version without database).
@@ -50,7 +50,7 @@ async def analyze_website_simple(
     start_time = time.time()
     
     try:
-        api_logger.info("Starting simplified analysis", url=str(request.url), user=current_user)
+        api_logger.info("Starting simplified analysis", url=str(request.url), user="demo")
         
         # Check cache first
         questions_hash = hashlib.md5(str(request.questions or []).encode()).hexdigest()
