@@ -6,7 +6,7 @@ import logging
 import time
 import hashlib
 from typing import Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -41,6 +41,7 @@ router = APIRouter()
 )
 @analyze_rate_limit
 async def analyze_website_simple(
+    http_request: Request,
     request: AnalyzeRequest,
     # current_user: str = Depends(get_current_user)  # Temporarily disabled for testing
 ) -> AnalyzeResponse:
