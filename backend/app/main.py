@@ -97,6 +97,11 @@ async def root():
         "environment": settings.environment
     }
 
+@app.post("/test-demo")
+async def test_demo():
+    """Simple test endpoint."""
+    return {"message": "Demo endpoint working", "timestamp": int(time.time())}
+
 @app.post("/api/v1/analyze-demo")
 async def analyze_demo(request: dict):
     """Demo endpoint that returns mock analysis data without authentication."""
