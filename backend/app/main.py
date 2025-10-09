@@ -96,6 +96,11 @@ async def root():
         "environment": settings.environment
     }
 
+@app.post("/test-endpoint")
+async def test_endpoint():
+    """Test endpoint without authentication."""
+    return {"message": "Test endpoint working", "status": "success"}
+
 
 @app.get("/health")
 async def health_check():
