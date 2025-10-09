@@ -103,6 +103,26 @@ async def test_demo():
     """Simple test endpoint."""
     return {"message": "Demo endpoint working", "timestamp": int(time.time())}
 
+@app.get("/test-services")
+async def test_services():
+    """Test endpoint to check service status."""
+    from app.services.ai_processor import AIProcessor
+    from app.services.scraper import WebScraper
+    from app.services.scraper_fallback import FallbackScraper
+    
+    ai_processor = AIProcessor()
+    scraper = WebScraper()
+    fallback_scraper = FallbackScraper()
+    
+    return {
+        "ai_processor_mock_mode": ai_processor.mock_mode,
+        "ai_processor_has_api_key": bool(ai_processor.api_key),
+        "fallback_scraper_mock_mode": fallback_scraper.mock_mode,
+        "fallback_scraper_has_api_key": bool(fallback_scraper.api_key),
+        "scraper_timeout": scraper.timeout,
+        "timestamp": int(time.time())
+    }
+
 @app.post("/api/v1/analyze-demo")
 async def analyze_demo(request: dict):
     """Demo endpoint that returns mock analysis data without authentication."""
