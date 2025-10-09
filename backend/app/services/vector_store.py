@@ -183,6 +183,47 @@ class VectorStoreService:
             return results
             
         except Exception as e:
+            # Auto-create collection if missing, then retry once
+            error_text = str(e)
+            if "doesn't exist" in error_text or "Not found: Collection" in error_text or "404" in error_text:
+                logger.warning(f"Collection {self.collection_name} missing, attempting to create and retry search")
+                created = await self.create_collection()
+                if created:
+                    try:
+                        filter_condition = None
+                        if session_id:
+                            filter_condition = Filter(
+                                must=[
+                                    FieldCondition(
+                                        key="session_id",
+                                        match=MatchValue(value=session_id)
+                                    )
+                                ]
+                            )
+                        search_result = self.client.search(
+                            collection_name=self.collection_name,
+                            query_vector=query_embedding,
+                            query_filter=filter_condition,
+                            limit=limit,
+                            score_threshold=score_threshold
+                        )
+                        results = []
+                        for hit in search_result:
+                            results.append({
+                                "id": hit.id,
+                                "score": hit.score,
+                                "text": hit.payload.get("text_chunk", ""),
+                                "chunk_type": hit.payload.get("chunk_type", ""),
+                                "session_id": hit.payload.get("session_id", ""),
+                                "url": hit.payload.get("url", ""),
+                                "chunk_index": hit.payload.get("chunk_index", 0),
+                                "text_length": hit.payload.get("text_length", 0)
+                            })
+                        logger.info("Search succeeded after creating collection")
+                        return results
+                    except Exception as e2:
+                        logger.error(f"Retry search failed after creating collection: {str(e2)}")
+                        return []
             logger.error(f"Error searching similar chunks: {str(e)}")
             return []
     
