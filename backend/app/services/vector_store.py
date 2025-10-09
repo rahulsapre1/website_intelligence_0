@@ -244,6 +244,45 @@ class VectorStoreService:
                     except Exception as e2:
                         logger.error(f"Retry search failed after creating collection: {str(e2)}")
                         return []
+            # Handle missing payload index for filters
+            if "Index required but not found" in error_text or "Create an index for this key" in error_text:
+                logger.warning("Payload index missing for filter key; ensuring indexes and retrying search")
+                try:
+                    await self.ensure_indexes()
+                    filter_condition = None
+                    if session_id:
+                        filter_condition = Filter(
+                            must=[
+                                FieldCondition(
+                                    key="session_id",
+                                    match=MatchValue(value=session_id)
+                                )
+                            ]
+                        )
+                    search_result = self.client.search(
+                        collection_name=self.collection_name,
+                        query_vector=query_embedding,
+                        query_filter=filter_condition,
+                        limit=limit,
+                        score_threshold=score_threshold
+                    )
+                    results = []
+                    for hit in search_result:
+                        results.append({
+                            "id": hit.id,
+                            "score": hit.score,
+                            "text": hit.payload.get("text_chunk", ""),
+                            "chunk_type": hit.payload.get("chunk_type", ""),
+                            "session_id": hit.payload.get("session_id", ""),
+                            "url": hit.payload.get("url", ""),
+                            "chunk_index": hit.payload.get("chunk_index", 0),
+                            "text_length": hit.payload.get("text_length", 0)
+                        })
+                    logger.info("Search succeeded after ensuring payload indexes")
+                    return results
+                except Exception as e3:
+                    logger.error(f"Retry search failed after ensuring indexes: {str(e3)}")
+                    return []
             logger.error(f"Error searching similar chunks: {str(e)}")
             return []
     
