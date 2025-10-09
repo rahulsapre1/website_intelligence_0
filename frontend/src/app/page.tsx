@@ -112,6 +112,7 @@ export default function WebsiteIntelligenceDashboard() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_TOKEN}`,
         },
         body: JSON.stringify({ url }),
       });
@@ -120,6 +121,14 @@ export default function WebsiteIntelligenceDashboard() {
       const endTime = Date.now();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setAnalysisError("Authentication failed. Please check your API key configuration.");
+          return;
+        }
+        if (response.status === 429) {
+          setAnalysisError("Rate limit exceeded. Please wait a moment before trying again.");
+          return;
+        }
         // Fallback to mock data if API fails
         console.log("API failed, using mock data for demonstration");
         const mockData = {
@@ -203,6 +212,26 @@ export default function WebsiteIntelligenceDashboard() {
       const data: ChatResponse = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          const errorMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            type: "assistant",
+            content: "Authentication failed. Please check your API key configuration.",
+            timestamp: new Date(),
+          };
+          setChatMessages(prev => [...prev, errorMessage]);
+          return;
+        }
+        if (response.status === 429) {
+          const errorMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            type: "assistant",
+            content: "Rate limit exceeded. Please wait a moment before asking another question.",
+            timestamp: new Date(),
+          };
+          setChatMessages(prev => [...prev, errorMessage]);
+          return;
+        }
         // Fallback to mock response if API fails
         console.log("Chat API failed, using mock response");
         const mockResponse = `Based on the analysis of ${analysisResult.url}, here are some additional insights:

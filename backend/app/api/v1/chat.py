@@ -17,6 +17,7 @@ from app.services.ai_processor import AIProcessor
 from app.services.embeddings import EmbeddingService
 from app.services.database import DatabaseService
 from app.services.vector_store import VectorStoreService
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -59,18 +60,48 @@ async def chat_about_website(
     try:
         logger.info(f"Processing chat query: {request.query[:100]}...")
         
-        # Initialize services
+        # Initialize services with error handling
         ai_processor = AIProcessor()
-        embedding_service = EmbeddingService()
-        database_service = DatabaseService()
-        vector_store_service = VectorStoreService()
+        
+        # Check if database services are available
+        database_service = None
+        vector_store_service = None
+        embedding_service = None
+        
+        try:
+            if settings.supabase_url and settings.supabase_key:
+                database_service = DatabaseService()
+            else:
+                logger.warning("Supabase not configured, chat functionality limited")
+        except Exception as e:
+            logger.error(f"Failed to initialize database service: {e}")
+        
+        try:
+            if settings.qdrant_url and settings.qdrant_api_key:
+                vector_store_service = VectorStoreService()
+                embedding_service = EmbeddingService()
+            else:
+                logger.warning("Qdrant not configured, vector search disabled")
+        except Exception as e:
+            logger.error(f"Failed to initialize vector services: {e}")
         
         # Step 1: Find analysis session
         session_data = None
-        if request.session_id:
-            session_data = await database_service.get_analysis_session(request.session_id)
-        elif request.url:
-            session_data = await database_service.get_analysis_session_by_url(str(request.url))
+        if database_service:
+            if request.session_id:
+                session_data = await database_service.get_analysis_session(request.session_id)
+            elif request.url:
+                session_data = await database_service.get_analysis_session_by_url(str(request.url))
+        else:
+            # If database not available, create a mock session for basic chat functionality
+            if request.url:
+                session_data = {
+                    "id": f"mock_{hash(str(request.url))}",
+                    "url": str(request.url),
+                    "scraped_content": "Database not available - using mock session for basic chat functionality.",
+                    "insights": {}
+                }
+                logger.info("Using mock session for chat due to database unavailability")
         
         if not session_data:
             raise HTTPException(
@@ -80,7 +111,8 @@ async def chat_about_website(
                     code="SESSION_NOT_FOUND",
                     details={
                         "session_id": request.session_id,
-                        "url": str(request.url) if request.url else None
+                        "url": str(request.url) if request.url else None,
+                        "database_available": database_service is not None
                     }
                 )
             )
@@ -89,7 +121,7 @@ async def chat_about_website(
         conversation_history = []
         if request.conversation_history:
             conversation_history = request.conversation_history
-        else:
+        elif database_service:
             # Get recent conversation history from database
             conversation_history = await database_service.get_conversation_history(
                 session_data["id"], 
@@ -102,11 +134,13 @@ async def chat_about_website(
             ]
         
         # Step 3: Generate query embedding for context retrieval
-        query_embedding = await embedding_service.generate_embedding(request.query)
+        query_embedding = None
+        if embedding_service:
+            query_embedding = await embedding_service.generate_embedding(request.query)
         
         # Step 4: Find relevant context chunks
         relevant_chunks = []
-        if query_embedding:
+        if query_embedding and vector_store_service:
             relevant_chunks = await vector_store_service.search_similar_chunks(
                 query_embedding=query_embedding,
                 session_id=session_data["id"],
@@ -151,13 +185,19 @@ async def chat_about_website(
         # Step 7: Generate follow-up suggestions
         follow_up_suggestions = await ai_processor.generate_follow_up_suggestions(context)
         
-        # Step 8: Store conversation in database
-        conversation_data = await database_service.create_conversation(
-            session_id=session_data["id"],
-            query=request.query,
-            answer=ai_response["answer"],
-            context_used=sources
-        )
+        # Step 8: Store conversation in database (if available)
+        conversation_data = {"id": "mock_conversation_id"}
+        if database_service:
+            try:
+                conversation_data = await database_service.create_conversation(
+                    session_id=session_data["id"],
+                    query=request.query,
+                    answer=ai_response["answer"],
+                    context_used=sources
+                )
+            except Exception as e:
+                logger.warning(f"Failed to store conversation: {e}")
+                conversation_data = {"id": f"failed_{int(time.time())}"}
         
         # Calculate processing time
         processing_time = int((time.time() - start_time) * 1000)

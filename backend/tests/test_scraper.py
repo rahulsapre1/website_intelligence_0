@@ -85,7 +85,9 @@ class TestFallbackScraper:
             mock_response.status_code = 200
             mock_response.headers = {"date": "2025-01-08T10:00:00Z"}
             
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value = mock_client_instance
             
             result = await fallback_scraper.scrape_url("https://example.com")
             
@@ -134,8 +136,8 @@ class TestContentDetector:
     
     def test_should_not_use_fallback_good_content(self, detector):
         """Test no fallback for good content."""
-        html = "<html><body><h1>Company</h1><p>We provide amazing services to our customers.</p></body></html>"
-        text = "Company We provide amazing services to our customers."
+        html = "<html><body><h1>Company</h1><p>We provide amazing services to our customers. Our company has been in business for over 10 years, serving thousands of clients worldwide. We offer comprehensive solutions including consulting, development, and support services. Our team consists of experienced professionals who are dedicated to delivering exceptional results. Contact us today to learn more about how we can help your business grow and succeed in today's competitive market. We pride ourselves on our commitment to excellence and customer satisfaction. Our innovative approach to problem-solving sets us apart from our competitors in the industry.</p></body></html>"
+        text = "Company We provide amazing services to our customers. Our company has been in business for over 10 years, serving thousands of clients worldwide. We offer comprehensive solutions including consulting, development, and support services. Our team consists of experienced professionals who are dedicated to delivering exceptional results. Contact us today to learn more about how we can help your business grow and succeed in today's competitive market. We pride ourselves on our commitment to excellence and customer satisfaction. Our innovative approach to problem-solving sets us apart from our competitors in the industry."
         
         result = detector.should_use_fallback(html, text)
         

@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+      "render": {
+        "url": "https://mcp.render.com/mcp",
+        "headers": {
+          "Authorization": "Bearer rnd_XBkDKPasTw86ymD311qCYyOm9w4z",
+          "X-Render-Service-Name": "website-intelligence-api"
+        }
+      }
+    }
+  }

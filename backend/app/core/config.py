@@ -42,8 +42,8 @@ class Settings(BaseSettings):
     scraping_timeout: int = Field(default=10, env="SCRAPING_TIMEOUT")
     
     # Rate Limiting
-    analyze_rate_limit: str = Field(default="10/minute", env="ANALYZE_RATE_LIMIT")
-    chat_rate_limit: str = Field(default="30/minute", env="CHAT_RATE_LIMIT")
+    analyze_rate_limit: str = Field(default="20/minute", env="ANALYZE_RATE_LIMIT")
+    chat_rate_limit: str = Field(default="60/minute", env="CHAT_RATE_LIMIT")
     
     class Config:
         env_file = ".env"
