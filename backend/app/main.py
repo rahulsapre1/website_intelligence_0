@@ -59,6 +59,7 @@ app.add_middleware(
         "https://website-intelligence.vercel.app",
         "https://www.website-intelligence.vercel.app",
         "https://website-intelligence-frontend.vercel.app",
+        "https://website-intelligence-0.vercel.app",
         "https://website-intelligence-0-git-main-rahuls-projects-ce3d64d4.vercel.app"
     ],
     allow_credentials=True,
