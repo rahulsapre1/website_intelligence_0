@@ -123,6 +123,35 @@ async def test_services():
         "timestamp": int(time.time())
     }
 
+@app.post("/api/v1/analyze-simple-debug")
+async def analyze_simple_debug(request: dict):
+    """Debug version of analyze-simple to identify issues."""
+    try:
+        from app.services.ai_processor import AIProcessor
+        from app.services.scraper import WebScraper
+        from app.services.scraper_fallback import FallbackScraper
+        
+        # Test service initialization
+        ai_processor = AIProcessor()
+        scraper = WebScraper()
+        fallback_scraper = FallbackScraper()
+        
+        return {
+            "status": "services_initialized",
+            "ai_processor_mock_mode": ai_processor.mock_mode,
+            "fallback_scraper_mock_mode": fallback_scraper.mock_mode,
+            "url": request.get("url", "https://example.com"),
+            "timestamp": int(time.time())
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "url": request.get("url", "https://example.com"),
+            "timestamp": int(time.time())
+        }
+
 @app.post("/api/v1/analyze-demo")
 async def analyze_demo(request: dict):
     """Demo endpoint that returns mock analysis data without authentication."""
