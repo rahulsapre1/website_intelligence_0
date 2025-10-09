@@ -104,6 +104,11 @@ class AIProcessor:
         try:
             logger.info(f"Answering question: {query[:100]}...")
             
+            # Return mock response if in mock mode
+            if self.mock_mode:
+                logger.info("Returning mock chat response - API key not configured")
+                return self._get_mock_chat_response(query, context, conversation_history)
+            
             # Generate prompt
             prompt = ConversationPrompts.get_chat_prompt(query, context, conversation_history)
             
@@ -270,5 +275,42 @@ class AIProcessor:
                 "custom_questions_count": len(custom_questions) if custom_questions else 0,
                 "extraction_method": "mock_demo",
                 "confidence": "Mock data for demonstration"
+            }
+        }
+    
+    def _get_mock_chat_response(self, query: str, context: str, conversation_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
+        """Generate mock chat response for demonstration purposes."""
+        
+        # Generate contextual responses based on common question types
+        query_lower = query.lower()
+        
+        if "pricing" in query_lower or "cost" in query_lower or "price" in query_lower:
+            answer = "Based on the website content, this appears to be a technology company that likely offers subscription-based pricing models. They typically provide tiered plans for different business sizes, with enterprise solutions available for larger organizations. For specific pricing details, I'd recommend contacting them directly through their website."
+        
+        elif "contact" in query_lower or "email" in query_lower or "phone" in query_lower:
+            answer = "The website appears to have contact information available. You can typically find their contact details in the footer, about page, or contact section. They likely have multiple ways to reach them including email, phone, and possibly a contact form on their website."
+        
+        elif "services" in query_lower or "products" in query_lower or "offer" in query_lower:
+            answer = "This company appears to offer technology solutions focused on business automation and productivity. Their services likely include workflow automation tools, AI-powered analytics, integration services, and custom solutions for enterprise clients. They seem to target B2B customers looking to streamline their operations."
+        
+        elif "about" in query_lower or "company" in query_lower or "who" in query_lower:
+            answer = "This appears to be a technology company specializing in business automation solutions. They focus on helping enterprises improve their operational efficiency through AI-powered tools and automation platforms. The company seems to be positioned as a B2B service provider in the technology sector."
+        
+        elif "location" in query_lower or "where" in query_lower or "address" in query_lower:
+            answer = "The company's location information should be available on their website, typically in the footer or contact section. Many technology companies are based in major tech hubs, but the specific location would be listed on their website for accurate information."
+        
+        else:
+            answer = f"Based on the website content, I can see this is a technology company focused on business solutions. Regarding your question about '{query}', I'd recommend checking their website for the most up-to-date information or contacting them directly for specific details. They appear to offer comprehensive business automation and productivity solutions."
+        
+        return {
+            "answer": answer,
+            "query": query,
+            "context_length": len(context),
+            "conversation_turns": len(conversation_history) if conversation_history else 0,
+            "answer_metadata": {
+                "model": "mock_demo",
+                "response_length": len(answer),
+                "has_context": len(context) > 0,
+                "mock_mode": True
             }
         }

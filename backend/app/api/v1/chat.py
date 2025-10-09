@@ -72,37 +72,46 @@ async def chat_about_website(
         try:
             if settings.supabase_url and settings.supabase_key:
                 database_service = DatabaseService()
+                logger.info("Database service initialized successfully")
             else:
                 logger.warning("Supabase not configured, chat functionality limited")
         except Exception as e:
             logger.error(f"Failed to initialize database service: {e}")
+            database_service = None
         
         try:
             if settings.qdrant_url and settings.qdrant_api_key:
                 vector_store_service = VectorStoreService()
                 embedding_service = EmbeddingService()
+                logger.info("Vector services initialized successfully")
             else:
                 logger.warning("Qdrant not configured, vector search disabled")
         except Exception as e:
             logger.error(f"Failed to initialize vector services: {e}")
+            vector_store_service = None
+            embedding_service = None
         
         # Step 1: Find analysis session
         session_data = None
         if database_service:
-            if chat_request.session_id:
-                session_data = await database_service.get_analysis_session(chat_request.session_id)
-            elif chat_request.url:
-                session_data = await database_service.get_analysis_session_by_url(str(chat_request.url))
-        else:
-            # If database not available, create a mock session for basic chat functionality
-            if chat_request.url:
-                session_data = {
-                    "id": f"mock_{hash(str(chat_request.url))}",
-                    "url": str(chat_request.url),
-                    "scraped_content": "Database not available - using mock session for basic chat functionality.",
-                    "insights": {}
-                }
-                logger.info("Using mock session for chat due to database unavailability")
+            try:
+                if chat_request.session_id:
+                    session_data = await database_service.get_analysis_session(chat_request.session_id)
+                elif chat_request.url:
+                    session_data = await database_service.get_analysis_session_by_url(str(chat_request.url))
+            except Exception as e:
+                logger.error(f"Error retrieving session from database: {e}")
+                session_data = None
+        
+        # If no session found in database, create a basic session for AI processing
+        if not session_data and chat_request.url:
+            session_data = {
+                "id": f"session_{hash(str(chat_request.url))}",
+                "url": str(chat_request.url),
+                "scraped_content": f"Website content for {chat_request.url} - Database not available, using basic chat functionality.",
+                "insights": {}
+            }
+            logger.info("Using basic session for chat - database unavailable or session not found")
         
         if not session_data:
             raise HTTPException(
