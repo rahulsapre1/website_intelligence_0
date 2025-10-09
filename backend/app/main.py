@@ -183,6 +183,17 @@ async def health_check():
         "log_level": settings.log_level
     }
 
+@app.get("/env-check")
+async def env_check():
+    """Check environment variables for debugging."""
+    return {
+        "gemini_api_key_present": bool(settings.gemini_api_key),
+        "jina_ai_api_key_present": bool(settings.jina_ai_api_key),
+        "environment": settings.environment,
+        "api_secret_key_present": bool(settings.api_secret_key),
+        "timestamp": int(time.time())
+    }
+
 
 # Include API routes
 from app.api.v1 import analyze, chat, analyze_simple, test_simple, analyze_mock, monitoring
