@@ -152,6 +152,35 @@ async def analyze_simple_debug(request: dict):
             "timestamp": int(time.time())
         }
 
+@app.post("/api/v1/test-imports")
+async def test_imports(request: dict):
+    """Test endpoint to check if imports are working."""
+    try:
+        # Test basic imports
+        from app.models.requests import AnalyzeRequest
+        from app.models.responses import AnalyzeResponse
+        
+        # Test service imports
+        from app.services.ai_processor import AIProcessor
+        from app.services.scraper import WebScraper
+        from app.services.scraper_fallback import FallbackScraper
+        from app.services.cache import cache_service
+        from app.utils.text_processor import TextProcessor
+        
+        return {
+            "status": "imports_successful",
+            "url": request.get("url", "https://example.com"),
+            "timestamp": int(time.time())
+        }
+    except Exception as e:
+        return {
+            "status": "import_error",
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "url": request.get("url", "https://example.com"),
+            "timestamp": int(time.time())
+        }
+
 @app.post("/api/v1/analyze-demo")
 async def analyze_demo(request: dict):
     """Demo endpoint that returns mock analysis data without authentication."""
