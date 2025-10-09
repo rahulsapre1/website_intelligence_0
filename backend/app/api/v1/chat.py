@@ -105,10 +105,14 @@ async def chat_about_website(
         
         # If no session found in database, create a basic session for AI processing
         if not session_data and chat_request.url:
+            # Create more informative context based on the URL
+            url_str = str(chat_request.url)
+            domain_info = _extract_domain_info(url_str)
+            
             session_data = {
                 "id": f"session_{hash(str(chat_request.url))}",
-                "url": str(chat_request.url),
-                "scraped_content": f"Website content for {chat_request.url} - Database not available, using basic chat functionality.",
+                "url": url_str,
+                "scraped_content": f"Website Analysis for {url_str}\n\n{domain_info}\n\nNote: This is a basic analysis without full website scraping. For detailed information, please visit the website directly or contact the business.",
                 "insights": {}
             }
             logger.info("Using basic session for chat - database unavailable or session not found")
@@ -245,3 +249,45 @@ async def chat_about_website(
                 details={"error": str(e)}
             ).dict()
         )
+
+
+def _extract_domain_info(url: str) -> str:
+    """Extract basic domain information for context."""
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+        
+        # Remove www. prefix
+        if domain.startswith('www.'):
+            domain = domain[4:]
+        
+        # Generate basic domain analysis
+        domain_parts = domain.split('.')
+        if len(domain_parts) >= 2:
+            main_domain = domain_parts[0]
+            tld = domain_parts[-1]
+            
+            # Basic industry hints from domain names
+            industry_hints = []
+            if any(word in main_domain for word in ['tech', 'app', 'software', 'digital', 'ai', 'data']):
+                industry_hints.append("technology")
+            if any(word in main_domain for word in ['shop', 'store', 'market', 'buy', 'sell']):
+                industry_hints.append("e-commerce")
+            if any(word in main_domain for word in ['news', 'blog', 'media', 'press']):
+                industry_hints.append("media/publishing")
+            if any(word in main_domain for word in ['finance', 'bank', 'money', 'invest']):
+                industry_hints.append("financial services")
+            if any(word in main_domain for word in ['health', 'medical', 'care', 'wellness']):
+                industry_hints.append("healthcare")
+            if any(word in main_domain for word in ['edu', 'school', 'university', 'learn']):
+                industry_hints.append("education")
+            
+            industry_text = f" (appears to be in {', '.join(industry_hints)} industry)" if industry_hints else ""
+            
+            return f"Domain: {domain}\nMain Domain: {main_domain}\nTop-level Domain: .{tld}{industry_text}\n\nThis appears to be a business website. The domain structure suggests it's likely a professional organization with an online presence."
+        else:
+            return f"Domain: {domain}\n\nThis appears to be a business website with an online presence."
+            
+    except Exception as e:
+        return f"Website URL: {url}\n\nThis appears to be a business website with an online presence."

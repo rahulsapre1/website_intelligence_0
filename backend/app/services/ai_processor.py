@@ -281,26 +281,47 @@ class AIProcessor:
     def _get_mock_chat_response(self, query: str, context: str, conversation_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
         """Generate mock chat response for demonstration purposes."""
         
+        # Extract website domain from context if available
+        website_domain = "this website"
+        if context and "Website content for" in context:
+            try:
+                # Extract URL from context like "Website content for https://example.com"
+                url_start = context.find("Website content for ") + len("Website content for ")
+                url_end = context.find(" - Database not available")
+                if url_end > url_start:
+                    url = context[url_start:url_end]
+                    from urllib.parse import urlparse
+                    parsed = urlparse(url)
+                    website_domain = parsed.netloc or url
+            except:
+                pass
+        
         # Generate contextual responses based on common question types
         query_lower = query.lower()
         
         if "pricing" in query_lower or "cost" in query_lower or "price" in query_lower:
-            answer = "Based on the website content, this appears to be a technology company that likely offers subscription-based pricing models. They typically provide tiered plans for different business sizes, with enterprise solutions available for larger organizations. For specific pricing details, I'd recommend contacting them directly through their website."
+            answer = f"Based on {website_domain}, I can see this appears to be a business website. For pricing information, I'd recommend checking their pricing page, product pages, or contacting them directly. Most businesses display their pricing structure prominently on their website, often in a dedicated pricing section or within their product/service descriptions."
         
         elif "contact" in query_lower or "email" in query_lower or "phone" in query_lower:
-            answer = "The website appears to have contact information available. You can typically find their contact details in the footer, about page, or contact section. They likely have multiple ways to reach them including email, phone, and possibly a contact form on their website."
+            answer = f"To find contact information for {website_domain}, I'd suggest looking in several common locations: the footer of the website, an 'About Us' or 'Contact' page, or in the header navigation. Most websites include contact details such as email addresses, phone numbers, or contact forms. You might also find social media links or a physical address if they have an office location."
         
         elif "services" in query_lower or "products" in query_lower or "offer" in query_lower:
-            answer = "This company appears to offer technology solutions focused on business automation and productivity. Their services likely include workflow automation tools, AI-powered analytics, integration services, and custom solutions for enterprise clients. They seem to target B2B customers looking to streamline their operations."
+            answer = f"Looking at {website_domain}, this appears to be a business website. To understand what services or products they offer, I'd recommend exploring their main navigation menu, product pages, or service descriptions. Most businesses clearly outline their offerings on their homepage or in dedicated sections. You might also find case studies, testimonials, or detailed service descriptions that explain what they provide."
         
         elif "about" in query_lower or "company" in query_lower or "who" in query_lower:
-            answer = "This appears to be a technology company specializing in business automation solutions. They focus on helping enterprises improve their operational efficiency through AI-powered tools and automation platforms. The company seems to be positioned as a B2B service provider in the technology sector."
+            answer = f"To learn more about the company behind {website_domain}, I'd suggest checking their 'About Us' page, company history section, or team page. Most businesses provide information about their mission, values, team members, and company background. You might also find information about their founding story, leadership team, or company culture in these sections."
         
         elif "location" in query_lower or "where" in query_lower or "address" in query_lower:
-            answer = "The company's location information should be available on their website, typically in the footer or contact section. Many technology companies are based in major tech hubs, but the specific location would be listed on their website for accurate information."
+            answer = f"For location information about {website_domain}, I'd recommend checking their contact page, footer, or 'About Us' section. Most businesses include their physical address, office locations, or service areas. You might also find information about whether they serve specific regions, have multiple locations, or operate primarily online."
+        
+        elif "hours" in query_lower or "time" in query_lower or "open" in query_lower:
+            answer = f"To find business hours or operating times for {website_domain}, I'd suggest checking their contact page, footer, or any location-specific pages. Most businesses display their hours of operation, especially if they have a physical location or customer service hours. This information is typically found alongside contact details."
+        
+        elif "reviews" in query_lower or "testimonials" in query_lower or "feedback" in query_lower:
+            answer = f"For reviews and testimonials about {website_domain}, I'd recommend looking for a testimonials section, case studies, or customer reviews on their website. Many businesses showcase client feedback, success stories, or reviews from customers. You might also find links to external review platforms or social proof elements throughout their site."
         
         else:
-            answer = f"Based on the website content, I can see this is a technology company focused on business solutions. Regarding your question about '{query}', I'd recommend checking their website for the most up-to-date information or contacting them directly for specific details. They appear to offer comprehensive business automation and productivity solutions."
+            answer = f"Based on {website_domain}, I can see this is a business website. Regarding your question about '{query}', I'd recommend exploring their website more thoroughly to find the specific information you're looking for. Most businesses organize their content logically, so try checking relevant sections like their main navigation, product pages, or contact information. If you can't find what you need, contacting them directly through their website would be the best approach."
         
         return {
             "answer": answer,
@@ -311,6 +332,7 @@ class AIProcessor:
                 "model": "mock_demo",
                 "response_length": len(answer),
                 "has_context": len(context) > 0,
-                "mock_mode": True
+                "mock_mode": True,
+                "website_analyzed": website_domain
             }
         }
