@@ -115,7 +115,7 @@ async def chat_about_website(
                         "url": str(chat_request.url) if chat_request.url else None,
                         "database_available": database_service is not None
                     }
-                )
+                ).dict()
             )
         
         # Step 2: Get conversation history
@@ -180,7 +180,7 @@ async def chat_about_website(
                     message="AI processing failed",
                     code="AI_PROCESSING_FAILED",
                     details={"error": ai_response.get("answer_metadata", {}).get("error")}
-                )
+                ).dict()
             )
         
         # Step 7: Generate follow-up suggestions
@@ -234,5 +234,5 @@ async def chat_about_website(
                 message="Internal server error during chat processing",
                 code="INTERNAL_ERROR",
                 details={"error": str(e)}
-            )
+            ).dict()
         )

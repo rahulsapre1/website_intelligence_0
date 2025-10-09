@@ -89,7 +89,7 @@ async def analyze_website_simple(
                         message="Failed to scrape website content",
                         code="SCRAPING_FAILED",
                         details={"url": str(analyze_request.url), "error": scraping_result.get("error_message")}
-                    )
+                    ).dict()
                 )
         
         # Step 2: Extract business insights using AI
@@ -109,7 +109,8 @@ async def analyze_website_simple(
             cache_service.set_ai_insights(content_hash, insights)
         
         # Step 3: Create response (without database storage)
-        session_id = f"simple_{int(time.time())}_{hash(str(analyze_request.url)) % 10000}"
+        import uuid
+        session_id = str(uuid.uuid4())
         processing_time_ms = int((time.time() - start_time) * 1000)
         
         # Create proper response objects
@@ -170,5 +171,5 @@ async def analyze_website_simple(
                 message="Internal server error during analysis",
                 code="ANALYSIS_ERROR",
                 details={"error": str(e)}
-            )
+            ).dict()
         )
