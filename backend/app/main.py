@@ -169,7 +169,12 @@ async def analyze_demo(request: dict):
             "ai_processor_has_api_key": bool(ai_processor.api_key),
             "fallback_scraper_mock_mode": fallback_scraper.mock_mode,
             "fallback_scraper_has_api_key": bool(fallback_scraper.api_key),
-            "scraper_timeout": scraper.timeout
+            "scraper_timeout": scraper.timeout,
+            "env_vars": {
+                "gemini_api_key_present": bool(settings.gemini_api_key),
+                "jina_ai_api_key_present": bool(settings.jina_ai_api_key),
+                "environment": settings.environment
+            }
         }
     }
 
