@@ -41,6 +41,7 @@ router = APIRouter()
 )
 @analyze_rate_limit
 async def analyze_website_simple(
+    http_request: Request,
     request: AnalyzeRequest,
     current_user: str = Depends(get_current_user)
 ) -> AnalyzeResponse:

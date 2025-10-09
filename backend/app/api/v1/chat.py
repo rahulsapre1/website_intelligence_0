@@ -5,7 +5,7 @@ API endpoint for conversational chat about analyzed websites.
 import logging
 import time
 from typing import Dict, Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -42,6 +42,7 @@ router = APIRouter()
 )
 @chat_rate_limit
 async def chat_about_website(
+    http_request: Request,
     request: ChatRequest,
     current_user: str = Depends(get_current_user)
 ) -> ChatResponse:
