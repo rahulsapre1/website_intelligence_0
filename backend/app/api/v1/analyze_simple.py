@@ -21,6 +21,9 @@ from app.services.cache import cache_service
 from app.utils.text_processor import TextProcessor
 from app.utils.logger import api_logger
 from app.services.crawler import FocusedCrawler
+from app.services.embeddings import EmbeddingService
+from app.services.vector_store import VectorStoreService
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +98,7 @@ async def analyze_website_simple(
         
         # Step 2: Optionally crawl a few relevant in-domain pages for richer context
         content = scraping_result["full_text"]
+        crawled_urls = []
         try:
             crawler = FocusedCrawler()
             extra_pages = await crawler.crawl(
@@ -106,9 +110,38 @@ async def analyze_website_simple(
                 # Merge extra page texts, capped to a reasonable size
                 merged_extra = "\n\n".join(p["full_text"][:8000] for p in extra_pages)
                 content = (content + "\n\n" + merged_extra)[:50000]
+                crawled_urls = [p["url"] for p in extra_pages]
                 api_logger.info("Augmented content with crawled pages", extra_pages=len(extra_pages))
         except Exception as e:
             logger.warning(f"Focused crawl skipped due to error: {e}")
+        # Generate a session_id early so we can use it for vector storage
+        import uuid
+        session_id = str(uuid.uuid4())
+
+        # Step 3: Persist to vector store (if configured): chunk → embed → upsert
+        try:
+            if settings.qdrant_url and settings.qdrant_api_key and settings.gemini_api_key:
+                text_chunks = text_processor.chunk_text(content, chunk_type="mixed")
+                if text_chunks:
+                    # Cap chunk count to control cost/time
+                    max_chunks = 40
+                    text_chunks = text_chunks[:max_chunks]
+                    embedding_service = EmbeddingService()
+                    vector_store = VectorStoreService()
+                    # Generate embeddings (sequential; can be optimized later)
+                    for ch in text_chunks:
+                        chunk_text = ch["text"][:4000]
+                        ch["embedding"] = await embedding_service.generate_embedding(chunk_text)
+                    # Upsert to Qdrant
+                    await vector_store.add_document_chunks(
+                        session_id=session_id,
+                        url=str(analyze_request.url),
+                        chunks=text_chunks
+                    )
+                    api_logger.info("Stored chunks in vector store", chunks=len(text_chunks))
+        except Exception as e:
+            logger.warning(f"Vector store step skipped due to error: {e}")
+
         api_logger.info("Extracted content for AI processing", content_length=len(content))
         
         # Check cache for AI insights
@@ -123,9 +156,7 @@ async def analyze_website_simple(
             # Cache the AI insights
             cache_service.set_ai_insights(content_hash, insights)
         
-        # Step 3: Create response (without database storage)
-        import uuid
-        session_id = str(uuid.uuid4())
+        # Step 4: Create response (without database storage)
         processing_time_ms = int((time.time() - start_time) * 1000)
         
         # Create proper response objects
@@ -164,7 +195,8 @@ async def analyze_website_simple(
             custom_answers=insights.get("custom_answers", []),
             extraction_metadata=extraction_metadata,
             fallback_used=scraping_result["scraping_method"] == "fallback",
-            success=True
+            success=True,
+            crawled_urls=crawled_urls or None
         )
         
         # Cache the complete result

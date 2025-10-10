@@ -48,6 +48,7 @@ interface AnalysisResponse {
   scraped_at: string;
   insights: AnalysisInsights;
   custom_answers?: string[];
+  crawled_urls?: string[];
 }
 
 interface ChatMessage {
@@ -433,6 +434,22 @@ This is a mock response demonstrating the chat functionality. In a production en
                       Insights for {analysisResult.url}
                     </CardDescription>
                   </CardHeader>
+                  {analysisResult.crawled_urls && analysisResult.crawled_urls.length > 0 && (
+                    <CardContent>
+                      <div className="mt-2">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Additional pages analyzed:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          {analysisResult.crawled_urls.map((link, idx) => (
+                            <li key={idx} className="text-sm truncate">
+                              <a href={link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                                {link}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </CardContent>
+                  )}
                 </Card>
 
                 {/* Business Insights Cards */}

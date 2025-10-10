@@ -67,6 +67,7 @@ class AnalyzeResponse(BaseModel):
     extraction_metadata: ExtractionMetadata = Field(..., description="Extraction process metadata")
     fallback_used: bool = Field(..., description="Whether fallback scraper was used")
     success: bool = Field(default=True, description="Whether analysis was successful")
+    crawled_urls: Optional[List[str]] = Field(default=None, description="List of in-domain links crawled for additional context")
 
 
 class ChatResponse(BaseModel):
