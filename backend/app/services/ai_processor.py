@@ -109,11 +109,15 @@ class AIProcessor:
                 logger.info("Returning mock chat response - API key not configured")
                 return self._get_mock_chat_response(query, context, conversation_history)
             
-            # Generate prompt
+            # Generate prompt with brevity and directness
             prompt = ConversationPrompts.get_chat_prompt(query, context, conversation_history)
+            prompt += "\n\nInstructions: Answer succinctly (2-5 sentences). Be specific to the question. Use only provided context. If unknown, say so briefly."
             
             # Generate response
             response = await self._generate_response(prompt)
+            # Enforce brevity post-process as safeguard
+            if len(response) > 800:
+                response = response[:800].rsplit('. ', 1)[0] + '.'
             
             # Create response structure
             answer = {

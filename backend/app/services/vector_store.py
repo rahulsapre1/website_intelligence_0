@@ -81,6 +81,16 @@ class VectorStoreService:
         except Exception as e:
             # If index already exists, Qdrant may error; log as debug
             logger.debug(f"Payload index ensure skipped/failed: {str(e)}")
+        try:
+            # Create index for url filter as a fallback
+            self.client.create_payload_index(
+                collection_name=self.collection_name,
+                field_name="url",
+                field_schema=PayloadSchemaType.KEYWORD
+            )
+            logger.info("Ensured payload index on url (keyword)")
+        except Exception as e:
+            logger.debug(f"Payload index ensure skipped/failed: {str(e)}")
     
     async def add_document_chunks(
         self, 
@@ -146,6 +156,7 @@ class VectorStoreService:
         self, 
         query_embedding: List[float], 
         session_id: str = None,
+        url: str = None,
         limit: int = 5,
         score_threshold: float = 0.7
     ) -> List[Dict[str, Any]]:
@@ -164,15 +175,23 @@ class VectorStoreService:
         try:
             # Build filter
             filter_condition = None
+            must_filters = []
             if session_id:
-                filter_condition = Filter(
-                    must=[
-                        FieldCondition(
-                            key="session_id",
-                            match=MatchValue(value=session_id)
-                        )
-                    ]
+                must_filters.append(
+                    FieldCondition(
+                        key="session_id",
+                        match=MatchValue(value=session_id)
+                    )
                 )
+            elif url:
+                must_filters.append(
+                    FieldCondition(
+                        key="url",
+                        match=MatchValue(value=url)
+                    )
+                )
+            if must_filters:
+                filter_condition = Filter(must=must_filters)
             
             # Search
             search_result = self.client.search(
@@ -211,15 +230,23 @@ class VectorStoreService:
                         # Ensure indexes before retry
                         await self.ensure_indexes()
                         filter_condition = None
+                        must_filters = []
                         if session_id:
-                            filter_condition = Filter(
-                                must=[
-                                    FieldCondition(
-                                        key="session_id",
-                                        match=MatchValue(value=session_id)
-                                    )
-                                ]
+                            must_filters.append(
+                                FieldCondition(
+                                    key="session_id",
+                                    match=MatchValue(value=session_id)
+                                )
                             )
+                        elif url:
+                            must_filters.append(
+                                FieldCondition(
+                                    key="url",
+                                    match=MatchValue(value=url)
+                                )
+                            )
+                        if must_filters:
+                            filter_condition = Filter(must=must_filters)
                         search_result = self.client.search(
                             collection_name=self.collection_name,
                             query_vector=query_embedding,
@@ -250,15 +277,23 @@ class VectorStoreService:
                 try:
                     await self.ensure_indexes()
                     filter_condition = None
+                    must_filters = []
                     if session_id:
-                        filter_condition = Filter(
-                            must=[
-                                FieldCondition(
-                                    key="session_id",
-                                    match=MatchValue(value=session_id)
-                                )
-                            ]
+                        must_filters.append(
+                            FieldCondition(
+                                key="session_id",
+                                match=MatchValue(value=session_id)
+                            )
                         )
+                    elif url:
+                        must_filters.append(
+                            FieldCondition(
+                                key="url",
+                                match=MatchValue(value=url)
+                            )
+                        )
+                    if must_filters:
+                        filter_condition = Filter(must=must_filters)
                     search_result = self.client.search(
                         collection_name=self.collection_name,
                         query_vector=query_embedding,

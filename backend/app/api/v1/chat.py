@@ -157,7 +157,8 @@ async def chat_about_website(
         if query_embedding and vector_store_service:
             relevant_chunks = await vector_store_service.search_similar_chunks(
                 query_embedding=query_embedding,
-                session_id=session_data["id"],
+                session_id=session_data.get("id"),
+                url=session_data.get("url"),
                 limit=5,
                 score_threshold=0.6
             )
@@ -179,10 +180,13 @@ async def chat_about_website(
         # Combine context
         context = "\n\n".join(context_parts)
         
-        # Step 6: Generate AI response
+        # Step 6: Generate AI response (concise and focused)
+        # Trim context to prevent overly long answers
+        max_context_len = 8000
+        context_for_ai = context[:max_context_len]
         ai_response = await ai_processor.answer_question(
             query=chat_request.query,
-            context=context,
+            context=context_for_ai,
             conversation_history=conversation_history
         )
         
